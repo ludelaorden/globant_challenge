@@ -1,41 +1,25 @@
-WITH temp1 AS (
-	SELECT
-		dep.id_departments,
-		dep.department,
-		COUNT(CASE WHEN EXTRACT(QUARTER FROM hired_date) = 1 THEN 1 END) AS Q1,
-		COUNT(CASE WHEN EXTRACT(QUARTER FROM hired_date) = 2 THEN 1 END) AS Q2,
-		COUNT(CASE WHEN EXTRACT(QUARTER FROM hired_date) = 3 THEN 1 END) AS Q3,
-		COUNT(CASE WHEN EXTRACT(QUARTER FROM hired_date) = 4 THEN 1 END) AS Q4
-	FROM employees AS emp
-	LEFT JOIN departments AS dep
-		ON emp.department = dep.id_departments
-	WHERE EXTRACT(YEAR FROM hired_date) = 2021
-	GROUP BY dep.department, id_departments
+WITH Empleados2021 AS (
+  SELECT
+    d.id AS department_id,
+    COUNT(*) AS num_empleados_contratados_2021
+  FROM employees e
+  JOIN departments d 
+	ON e.department_id = d.id
+  WHERE EXTRACT(YEAR FROM e.datetime) = 2021
+  GROUP BY d.id
 ),
-temp2 AS (
-SELECT 
-	id_departments,
-	department,
-	((Q1 + Q2 + Q3 + Q4) / 4) AS AVG_HIRE
-FROM temp1
-),
-temp3 AS(
-SELECT 
-	dep.id_departments,
-	dep.department,
-	COUNT(emp.id_hired_employees) as count_hired
-FROM employees AS emp
-JOIN departments dep
- ON emp.department = dep.id_departments
-GROUP BY dep.id_departments, dep.department
+MediaEmpleados2021 AS (
+  SELECT AVG(num_empleados_contratados_2021) AS media_empleados_2021
+  FROM Empleados2021
 )
-
-SELECT 
-	tmp.id_departments,
-	tmp.department,
-	tmp.count_hired
-FROM temp3 as tmp
-JOIN temp2 as tmp2
-	ON tmp.id_departments = tmp2.id_departments
-WHERE tmp.count_hired > tmp2.AVG_HIRE
-
+SELECT
+  d.id AS department_id,
+  d.department AS department_name,
+  Empleados2021.num_empleados_contratados_2021 AS num_empleados_contratados
+FROM departments d
+JOIN Empleados2021 
+	ON d.id = Empleados2021.department_id
+JOIN MediaEmpleados2021 
+	ON TRUE
+WHERE Empleados2021.num_empleados_contratados_2021 > MediaEmpleados2021.media_empleados_2021
+ORDER BY num_empleados_contratados DESC;
